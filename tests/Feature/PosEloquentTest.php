@@ -54,16 +54,16 @@ class PosEloquentTest extends TestCase
         $response->assertOk();
         $response->assertSee('About This Application');
         $response->assertSee('Request Execution Flow');
-        $response->assertSee('Data Architecture: From Arrays to Eloquent');
+        $response->assertSee('Data Architecture: Validation & Public Storage');
         $response->assertSee('Eloquent ORM');
         $response->assertSee('aria-current="page"', false);
 
         // Extended assertions for landmarks and flow
         $response->assertSee('Skip to main content');
-        $response->assertSee('Incoming URL');
-        $response->assertSee('Route Matching');
-        $response->assertSee('Eloquent Model Query');
-        $response->assertSee('View Presentation');
+        $response->assertSee('Route & CSRF Verification');
+        $response->assertSee('Form Request Validation');
+        $response->assertSee('Image Preparation & Eloquent Storage');
+        $response->assertSee('Redirect & View Presentation');
         $response->assertSee('App\Models\Customer');
         $response->assertSee('App\Models\User');
     }

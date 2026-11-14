@@ -1,9 +1,11 @@
 *.log
 *.zip
 .DS_Store
+.deploy.env
 .env
 .env.backup
 .env.production
+env.production
 .phpactor.json
 .phpunit.result.cache
 /.idea

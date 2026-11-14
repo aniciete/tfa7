@@ -1,170 +1,94 @@
-# Point-of-Sale (POS) Eloquent
+# Point-of-Sale (POS) Eloquent — Forms, Validation & File Uploads
 
 **Course:** IT0049 (Web System Technologies)  
-**Assessment:** Technical Formative Assessment 6 (TFA6) — From Arrays to Eloquent  
+**Assessment:** Technical Formative Assessment 7 (TFA7) — Making It Editable in Laravel  
 **Framework:** Laravel 13.x (PHP 8.3+)  
-**Hosted Application:** [http://tfa6.freedev.app](http://tfa6.freedev.app)  
-**GitHub Repository:** [https://github.com/aniciete/tfa6](https://github.com/aniciete/tfa6)  
+**Hosted Application:** [http://tfa7.freehosting.dev](http://tfa7.freehosting.dev)  
+**GitHub Repository:** [https://github.com/aniciete/tfa7](https://github.com/aniciete/tfa7)
 
 ---
 
 ## 1. Project Overview
 
-This project extends and matures the Laravel Point-of-Sale (POS) system from TFA5 by replacing temporary in-memory static arrays with a fully integrated relational database tier powered by **Laravel Eloquent ORM**.
-
-Following the foundational schema specifications established in **TFA2**, database migrations define the schema for `customers` and `users` tables, database seeders populate sample records, and Eloquent models (`Customer` and `User`) provide object-relational mapping without raw queries.
+This project extends the **Laravel POS Eloquent** application from TFA6 with validated create and edit forms for both **customers** and **staff users**, complete with `old()` input retention, inline field and summary validation feedback, and user avatar uploads prepared for display using **Intervention Image (`intervention/image-laravel`)** on Laravel's `Storage::disk('public')`.
 
 ### Required Pages and Route Table
 
-| URL Route | Route Name | Controller Action | Model / Data Source | View Template | Purpose |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `/` | `home` | `App\Http\Controllers\PageController::home` | N/A | `pages/home.blade.php` | POS application landing page with architectural overview and quick navigation |
-| `/about` | `about` | `App\Http\Controllers\PageController::about` | Architecture Specification | `pages/about.blade.php` | Laravel MVC request execution lifecycle and Eloquent ORM storage memo |
-| `/customers` | `customers.index` | `App\Http\Controllers\CustomerController::index` | `App\Models\Customer::all()` | `customers/index.blade.php` | Customer accounts directory listing full name, email, and phone |
-| `/users` | `users.index` | `App\Http\Controllers\UserController::index` | `App\Models\User::all()` | `users/index.blade.php` | Staff user accounts directory listing username, full name, and role |
+| URL Route | Method | Route Name | Controller Action | Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| `/` | `GET` | `home` | `PageController@home` | Landing overview with directory & creation links |
+| `/about` | `GET` | `about` | `PageController@about` | Request validation & `Storage` upload flow guide |
+| `/customers` | `GET` | `customers.index` | `CustomerController@index` | Customer directory with `+ New Customer` and row `Edit` links |
+| `/customers/create` | `GET` | `customers.create` | `CustomerController@create` | New customer creation form |
+| `/customers` | `POST` | `customers.store` | `CustomerController@store` | Validate (`SaveCustomerRequest`) and insert customer |
+| `/customers/{customer}/edit` | `GET` | `customers.edit` | `CustomerController@edit` | Edit form pre-filled with existing customer data |
+| `/customers/{customer}` | `PUT` | `customers.update` | `CustomerController@update` | Validate and update customer (`Rule::unique()->ignore()`) |
+| `/users` | `GET` | `users.index` | `UserController@index` | Staff user directory displaying 40&times;40 avatars or placeholder |
+| `/users/create` | `GET` | `users.create` | `UserController@create` | New user form with optional avatar upload |
+| `/users` | `POST` | `users.store` | `UserController@store` | Validate (`SaveUserRequest`), prepare avatar, and insert user |
+| `/users/{user}/edit` | `GET` | `users.edit` | `UserController@edit` | Edit user form pre-filled with current details & avatar preview |
+| `/users/{user}` | `PUT` | `users.update` | `UserController@update` | Validate, crop/store new avatar if uploaded, and clean up old image |
 
 ---
 
-## 2. Technical Stack & Prerequisites
+## 2. Validation & Image Handling Architecture
 
-- **Language:** PHP 8.3 or higher (tested on PHP 8.5.11; deployment runs on PHP 8.2+)
-- **Required PHP Extensions:** `pdo_sqlite`, `pdo_mysql`, `mbstring`, `openssl`, `curl`, `xml`, `bcmath`, `intl`, `gd`, `zip`
-- **Package Managers:** Composer 2.x & npm 10.x / Node.js 22.x
-- **Framework:** Laravel 13.x
-- **Frontend & Bundling:** Blade + Tailwind CSS v4 + Vite
-- **Typography & Theme:** Bright-Market Open-Ledger Design System (Self-hosted `Bricolage Grotesque` and `IBM Plex Mono`)
-- **Database:**
-  - **Local Development / Tests:** SQLite (`database/database.sqlite`) for instantaneous, zero-configuration setup.
-  - **Production Hosting:** MySQL on InfinityFree (`sql110.infinityfree.com`, database: `if0_43258606_tfa6`).
-  - **Schema & Seeder Export:** `database/schema_export.sql` containing standalone DDL and DML statements.
+1. **Form Requests (`app/Http/Requests/`):**
+   - `SaveCustomerRequest`: trims inputs before validation; requires `full_name` (`max:100`), requires a valid unique `email` (`Rule::unique('customers', 'email')->ignore($customer?->id)`), and accepts optional `phone` (`max:20`).
+   - `SaveUserRequest`: trims inputs and defaults omitted roles to `'Staff Member'`; requires unique `username` (`regex:/^[a-zA-Z0-9._-]+$/`, `Rule::unique('users', 'username')->ignore($user?->id)`), requires `full_name` (`max:100`), accepts operational `role`, and validates `avatar` (`nullable|file|image|max:2048` — 2 MB max, rejects SVGs & non-image files).
+   - Validation failures automatically redirect back with `old()` input and `$errors` displayed in both an accessible `#form-error-summary` (`role="alert"`) and field-level error notes (`aria-invalid="true"`).
+
+2. **Display-Ready Avatar Storage (`app/Services/AvatarService.php` & `database/migrations/0001_01_01_000004_add_avatar_to_users_table.php`):**
+   - Migration adds a nullable `avatar` (`varchar(255)`) column to `users`.
+   - `AvatarService::prepareAndStore()` uses `Intervention\Image\Laravel\Facades\Image` (`GD` driver) to decode uploaded files, center-crop/resize to **256&times;256**, encode cleanly by format (`PNG`, `WEBP`, or `JPEG`), store under `avatars/<uuid>.<ext>` via `Storage::disk('public')`, and save **only the relative path** in `users.avatar`.
+   - Old replaced avatars are deleted only after database persistence succeeds; users without an uploaded image gracefully fall back to `public/assets/images/avatar-placeholder.svg`.
 
 ---
 
 ## 3. Local Development Setup
 
-### 3.1 Clone the Repository
-```bash
-git clone https://github.com/aniciete/tfa6.git
-cd tfa6
-```
+### Prerequisites
+- PHP **8.3+** with `pdo_sqlite`, `pdo_mysql`, `mbstring`, `openssl`, `gd`, and `zip`
+- Composer **2.x** & Node.js / npm
 
-### 3.2 Install Dependencies
-Install PHP dependencies:
+### Setup Commands
 ```bash
+git clone https://github.com/aniciete/tfa7.git
+cd tfa7
 composer install
-```
-Install frontend dependencies:
-```bash
-npm install
-```
-
-### 3.3 Configure Environment File
-Copy the example environment template to `.env`:
-```bash
+npm install && npm run build
 cp .env.example .env
-```
-Generate the application key:
-```bash
 php artisan key:generate
-```
-Run database migrations and seeders:
-```bash
 touch database/database.sqlite
 php artisan migrate:fresh --seed
+php artisan storage:link
 ```
 
-### 3.4 Build Frontend Assets
-Compile assets for development or production:
-```bash
-npm run build
-```
-
-### 3.5 Start the Local Development Server
-To launch both the PHP development server and Vite hot reload concurrently:
-```bash
-composer run dev
-```
-Or start the backend server individually:
+### Start Local Server
 ```bash
 php artisan serve
 ```
-Access the application locally at: **[http://localhost:8000](http://localhost:8000)**.
+Open **[http://localhost:8000](http://localhost:8000)**.
 
 ---
 
-## 4. Architectural & Data Design
+## 4. Automated Test Suite
 
-### 4.1 Transition: From Arrays to Eloquent
-In accordance with the TFA6 laboratory activity instructions:
-1. **Migrations Matching TFA2 Schema:**
-   - `customers` table (`0001_01_01_000003_create_customers_table.php`):
-     - `id`: Primary key (bigint unsigned auto-increment)
-     - `full_name`: varchar(100) NOT NULL
-     - `email`: varchar(100) NOT NULL UNIQUE
-     - `phone`: varchar(20) DEFAULT NULL
-     - `created_at`, `updated_at`: timestamps
-   - `users` table (`0001_01_01_000000_create_users_table.php`):
-     - `id`: Primary key (bigint unsigned auto-increment)
-     - `username`: varchar(50) NOT NULL UNIQUE
-     - `full_name`: varchar(100) NOT NULL
-     - `role`: varchar(50) NOT NULL DEFAULT 'Staff Member'
-     - `created_at`, `updated_at`: timestamps
-
-2. **Eloquent Models (`app/Models/`):**
-   - `Customer.php`: Extends `Illuminate\Database\Eloquent\Model` with `$fillable = ['full_name', 'email', 'phone']`.
-   - `User.php`: Extends `Illuminate\Foundation\Auth\User` with `$fillable = ['username', 'full_name', 'role']`.
-
-3. **Database Seeders (`database/seeders/`):**
-   - `CustomerSeeder`: Populates 5 canonical records (Elena Rostova, Marcus Vance, Aria Thorne, Julian Mercer, Sophia Lin).
-   - `UserSeeder`: Populates 5 canonical staff records (Carlos Reyes, Beatriz Castro, Daniel Valdez, Camille Santos, Leo Navarro).
-   - `DatabaseSeeder`: Orchestrates seeding via `$this->call([CustomerSeeder::class, UserSeeder::class])`.
-
-4. **Controllers & Views:**
-   - `CustomerController::index()` executes `Customer::query()->orderBy('id')->get()`.
-   - `UserController::index()` executes `User::query()->orderBy('id')->get()`.
-   - Blade views iterate retrieved Eloquent model collections, displaying live records within responsive open-ledger tables.
-
----
-
-## 5. Running Automated Tests
-
-Run the automated test suite using Artisan:
+Run PHPUnit feature & unit tests:
 ```bash
 php artisan test
 ```
-The test suite (`tests/Feature/PosEloquentTest.php`) validates:
-- HTTP 200 OK responses across all four defined routes (`/`, `/about`, `/customers`, `/users`).
-- Accessible semantic landmarks (`role="banner"`, `role="main"`, `role="contentinfo"`, and skip link `#main-content`).
-- Accessible active navigation tracking (`aria-current="page"`).
-- Accurate rendering of seeded records retrieved via Eloquent models.
-- Seeders populating at least 5 sample records in both tables.
-- Eloquent model CRUD and timestamp casting behaviors.
-- Proper HTTP 404 response for unmapped routes.
-- Integrity of local assets (`assets/css/style.css`, `favicon.svg`, and self-hosted `.woff2` font files).
+Tests verify:
+- Landing, About, Customers, and Users routes (`PosEloquentTest`)
+- Customer create/edit validation, `old()` input retention, duplicate email rejection, and self-email update (`PosFormsAndUploadTest`)
+- User create/edit validation and duplicate/dotted username rules (`PosFormsAndUploadTest`)
+- Avatar upload image validation (&le; 2 MB, image-only), 256&times;256 resizing via Intervention Image, `Storage::disk('public')` storage & cleanup, and fallback placeholder rendering (`PosFormsAndUploadTest`)
 
 ---
 
-## 6. InfinityFree & FTP Deployment Architecture
+## 5. Database Export & Shared Hosting Deployment
 
-### 6.1 Shared Hosting & Zero-Friction Architecture
-Deploying modern Laravel applications to shared hosting environments like InfinityFree involves several known challenges that were addressed in this implementation:
-1. **Preventing Pure-FTPd Timeouts:** Uploading thousands of files individually over FTP triggers strict Pure-FTPd connection limits and drops transfers. Instead, the deployment utilizes a **single-archive upload + server-side extraction** pattern:
-   - Packaging bundles all production files, compiled assets, pre-seeded SQLite database, and lean dependencies into `tfa6-infinityfree.zip`.
-   - `curl -T` uploads the single archive and `extract.php` in a single reliable connection.
-   - `extract.php` unpacks the archive via PHP's native `ZipArchive` extension directly inside `/htdocs`, provisions MySQL tables from `database/schema_export.sql`, cleans up the ZIP, and self-destructs.
-2. **Dual-Path Static Asset Resolution:** On InfinityFree, the document root is permanently bound to `/htdocs`. To ensure all stylesheets, fonts, and icons resolve cleanly without 404 or MIME errors, assets are mirrored at both the root level (`/assets/`, `/build/`) and within `/public/`.
-3. **Eliminating Mixed Content SSL Errors:** Modern browsers block insecure stylesheets when a user navigates via HTTPS. The application configures trusted proxies (`$middleware->trustProxies(at: '*')`) in `bootstrap/app.php` and outputs protocol-relative asset links, ensuring assets match the protocol under both HTTP and HTTPS.
-
-### 6.2 Automated Deployment Execution
-Deploy the application with a single command via Bash:
-```bash
-./deploy-infinityfree.sh
-```
-Or via Python:
-```bash
-python3 scripts/deploy_infinityfree.py
-```
-
-The script automatically packages the application, transfers files to `ftpupload.net`, removes the default `index2.html` placeholder, and provides the extraction trigger.
-
-Live application: **[http://tfa6.freedev.app/](http://tfa6.freedev.app/)**
+- Schema migrations & seeders: `database/migrations/` & `database/seeders/`
+- Standalone MySQL DDL/DML export: [`database/schema_export.sql`](database/schema_export.sql)
+- Packaging & FTP deployment: copy `env.production.example` to `.env.production` (gitignored), set `FTP_USER`/`FTP_PASS` in `.deploy.env` (gitignored), and run `./deploy-infinityfree.sh`.
+- Live application: **[http://tfa7.freehosting.dev](http://tfa7.freehosting.dev)**
