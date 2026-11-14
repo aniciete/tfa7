@@ -12,7 +12,7 @@ class PageController extends Controller
     public function home(): View
     {
         return view('pages.home', [
-            'title'      => 'Home | POS Eloquent',
+            'title' => 'Home | POS Eloquent',
             'activePage' => 'home',
         ]);
     }
@@ -23,7 +23,7 @@ class PageController extends Controller
     public function about(): View
     {
         return view('pages.about', [
-            'title'      => 'About | POS Eloquent',
+            'title' => 'About | POS Eloquent',
             'activePage' => 'about',
         ]);
     }
