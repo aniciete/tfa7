@@ -8,6 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="{{ preg_replace('~^https?:~', '', asset('favicon.svg')) }}">
     <link rel="alternate icon" href="{{ preg_replace('~^https?:~', '', asset('favicon.ico')) }}">
     <link rel="stylesheet" href="{{ preg_replace('~^https?:~', '', asset('assets/css/style.css')) }}">
+    <script src="{{ preg_replace('~^https?:~', '', asset('assets/js/app.js')) }}" defer></script>
 </head>
 <body class="page-{{ $activePage ?? 'home' }}">
     <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -20,7 +21,7 @@
                 </a>
             </div>
 
-            <nav class="site-nav" aria-label="Main Navigation">
+            <nav class="site-nav" aria-label="Main">
                 <ul class="nav-list" role="list">
                     <li class="nav-item">
                         <a href="{{ route('home') }}" class="nav-link {{ ($activePage ?? '') === 'home' ? 'active' : '' }}" {!! ($activePage ?? '') === 'home' ? 'aria-current="page"' : '' !!}>Home</a>
@@ -41,14 +42,15 @@
 
     <main id="main-content" class="main-content" role="main" tabindex="-1">
         <div class="container content-container">
+            @include('partials.flash')
             @yield('content')
         </div>
     </main>
 
     <footer class="site-footer" role="contentinfo">
         <div class="container footer-container">
-            <p class="footer-text">IT0049 Web System Technologies &bull; Technical Formative Assessment 6</p>
-            <p class="footer-subtext">Laravel POS Eloquent &bull; Database Backed Models &amp; Migrations</p>
+            <p class="footer-text">IT0049 Web System Technologies &bull; Technical Formative Assessment 7</p>
+            <p class="footer-subtext">Laravel POS &bull; Forms, Request Validation &amp; Public Storage File Uploads</p>
         </div>
     </footer>
 </body>
