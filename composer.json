@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "aniciete/tfa6",
+    "name": "aniciete/tfa7",
     "type": "project",
-    "description": "IT0049 TFA6 - Laravel POS Eloquent (From Arrays to Eloquent)",
+    "description": "IT0049 TFA7 - Forms, Validation, and File Upload (Laravel POS)",
     "keywords": [
         "laravel",
         "framework"
@@ -10,6 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "intervention/image-laravel": "^4.1",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0"
     },
